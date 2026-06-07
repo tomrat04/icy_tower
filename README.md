@@ -1,4 +1,4 @@
-# Icy Tower — uczenie ze wzmocnieniem (Pygame)
+# Icy Tower — uczenie ze wzmocnieniem
 
 Platformówka 2D w stylu **Icy Tower** z proceduralną mapą i środowiskiem **Gymnasium** (DQN).
 
@@ -13,31 +13,29 @@ Platformówka 2D w stylu **Icy Tower** z proceduralną mapą i środowiskiem **G
 | Combo | Jednym skokiem min. **2 piętra** w górę (np. 10→12) — startuje **pasek timera** |
 | Utrzymanie combo | Zanim timer zniknie, kolejny skok o ≥2 piętra — dłuższa seria = więcej punktów na koniec |
 | Mapa | Do poz. 100: 1 szeroka platforma; od 100: 75% × 1 wąska, 25% × 2 wąskie |
-| Przegrana | Wypadnięcie poniżej dolnej krawędzi ekranu (auto-scroll) |
+| Przegrana | Wypadnięcie poniżej dolnej krawędzi ekranu|
 | Wygrana | Poziom **500** |
 
-## Instalacja
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-## Uruchomienie
+## Uruchomienie gry
 
 ```bash
 python play.py
 ```
 
-Trening: `python train.py` (domyślnie **1 000 000** kroków, 8 równoległych envów)
+## Trening
 
-Test agenta: `python test.py --model models/best/best_model`
+```bash
+python train.py
+```
+
+## Test agenta
+
+```bash
+python test.py 
+```
 
 ## Uczenie ze wzmocnieniem
 
-- **Akcje:** 0–5 (ruch, skok, kombinacje)
-- **Obserwacja (102 cechy):** `x`, `y`, `vx`, `vy`, pęd pionowy, margines od dołu ekranu, combo + **12 najbliższych platform** (pozycja względem agenta, szerokość, szansa lądowania)
-- Stary model wymaga **ponownego treningu**
-
-Logika: `icy_tower/game.py`, `icy_tower/config.py`
+- **Algorytm:** DQN
+- **Akcje:** 0–5 (lewo, prawo, skok - różne kombinacje)
+- **Obserwacje (102 cechy):** `x`, `y`, `vx`, `vy`, pęd pionowy, margines od dołu ekranu, combo + **12 najbliższych platform** (pozycja względem agenta, szerokość, szansa lądowania)
