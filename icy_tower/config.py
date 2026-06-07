@@ -1,38 +1,90 @@
 """Stałe gry Icy Tower."""
 
+import math
+
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 
 PLAYER_WIDTH = 28
 PLAYER_HEIGHT = 36
 
-MOVE_SPEED = 420.0
-BOUNCE_VELOCITY = -1000.0
-START_BOUNCE_VELOCITY = -1200.0
-GRAVITY = 1200.0
-MAX_BOUNCES_PER_PLATFORM = 1
-FALL_DEATH_MARGIN = 55.0
-MAX_FALL_SPEED = 900.0
-
 LEVEL_HEIGHT = 110
 PLATFORM_HEIGHT = 14
-PLATFORM_WIDTHS = (70, 100, 140)
 
-MIN_PLATFORMS_PER_LEVEL = 1
-MAX_PLATFORMS_PER_LEVEL = 3
+GRAVITY = 1200.0
+MAX_FALL_SPEED = 900.0
+
+# Ruch poziomy — stała prędkość (bez „boostów” na boki)
+MOVE_SPEED = 350.0
+
+# Rozbieg — trzymasz ←/→ na ziemi → rośnie pęd PIONOWY na następny skok
+RUN_MOMENTUM_BUILD = 1.8
+RUN_MOMENTUM_DECAY = 1.1
+RUN_MOMENTUM_FOR_MAX_JUMP = 1.0
+JUMP_VELOCITY_STAND = -math.sqrt(2 * GRAVITY * LEVEL_HEIGHT) * 1.25
+JUMP_VELOCITY_MAX = -math.sqrt(2 * GRAVITY * 2 * LEVEL_HEIGHT)
+
+
+def _jump_air_time(vy0: float, levels_up: int) -> float:
+    """Czas lotu do lądowania `levels_up` pięter wyżej (przy danym vy0)."""
+    target = levels_up * LEVEL_HEIGHT
+    a = 0.5 * GRAVITY
+    disc = vy0 * vy0 - 4 * a * target
+    if disc <= 0:
+        return 0.85
+    t1 = (-vy0 - math.sqrt(disc)) / (2 * a)
+    t2 = (-vy0 + math.sqrt(disc)) / (2 * a)
+    return max(t1, t2)
+
+
+# Maks. przesunięcie X (stopy) podczas skoku — do walidacji mapy
+JUMP_REACH_ONE_LEVEL = MOVE_SPEED * _jump_air_time(JUMP_VELOCITY_STAND, 1) + PLAYER_WIDTH + 16
+JUMP_REACH_TWO_LEVELS = MOVE_SPEED * _jump_air_time(JUMP_VELOCITY_MAX, 2) + PLAYER_WIDTH + 16
+
+# Wall jump — jednorazowy boost vy; po 2. odbiciu lub lądowaniu reset
+WALL_JUMP_MARGIN = 22.0
+WALL_JUMP_MIN_MOMENTUM = 0.1
+WALL_VY_BOOST = 1.15
+MAX_WALL_BOUNCES_PER_AIR = 2
+
+# Tarcie poziome na platformie (puszczenie klawiszy)
+GROUND_DECEL = 2600.0
+GROUND_STOP_SPEED = 25.0
+
+# Combo pięter
+COMBO_MIN_LEVELS_GAIN = 2
+COMBO_TIMER_DURATION = 2.4
+COMBO_TIMER_DECAY = 1.35
+COMBO_BASE_SCORE = 120
+
+# Kamera — płynne podążanie + powolny auto-scroll (presja)
+CAMERA_PLAYER_RATIO = 0.58
+CAMERA_SMOOTH = 6.5
+CAMERA_SMOOTH_AIR = 9.0
+AUTO_SCROLL_SPEED = 38.0
+SCROLL_DEATH_MARGIN = 40.0
+
+# Mapa
+HARD_MODE_LEVEL = 100
+EARLY_PLATFORM_WIDTHS = (190, 210, 230, 250)
+HARD_PLATFORM_WIDTHS = (65, 75, 85, 95)
+HARD_TWO_PLATFORM_CHANCE = 0.25
 
 WIN_LEVEL = 500
-OBS_PLATFORMS_ABOVE = 10
+OBS_PLATFORMS_NEAR = 12
 ROWS_AHEAD = 25
-ROWS_BEHIND = 5
+ROWS_BEHIND = 0
+MAP_SIDE_MARGIN = 24.0
 
 FPS = 60
 DT = 1.0 / FPS
 
-# Kolory (RGB)
 COLOR_BG = (25, 28, 45)
 COLOR_PLATFORM = (90, 200, 120)
 COLOR_PLAYER = (255, 220, 80)
 COLOR_TEXT = (230, 230, 240)
 COLOR_DEATH = (220, 70, 70)
 COLOR_WIN = (80, 220, 160)
+COLOR_COMBO_BAR = (255, 180, 50)
+COLOR_COMBO_BAR_BG = (60, 55, 80)
+COLOR_RUN_BAR = (100, 200, 255)

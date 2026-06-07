@@ -73,9 +73,10 @@ def main() -> None:
             obs = build_observation(state)
             action, _ = model.predict(obs, deterministic=True)
             action = int(action)
-            move_left = action == 1
-            move_right = action == 2
-            state = game.step(DT, move_left, move_right)
+            move_left = action in (1, 4)
+            move_right = action in (2, 5)
+            jump = action in (3, 4, 5)
+            state = game.step(DT, move_left, move_right, jump)
         elif state.status == GameStatus.FALLING:
             state = game.step(DT, False, False)
             if state.player.y - state.camera_y > SCREEN_HEIGHT + 120:

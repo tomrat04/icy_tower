@@ -1,4 +1,4 @@
-"""Gra ręczna — sterowanie A/D, ESC wyjście, R restart."""
+"""Gra ręczna — A/D lub strzałki, Spacja skok, ESC wyjście, R restart."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from icy_tower.render import GameRenderer
 def main() -> None:
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Icy Tower — A/D")
+    pygame.display.set_caption("Icy Tower — strzałki / A/D, Spacja")
     clock = pygame.time.Clock()
     renderer = GameRenderer(screen)
     game = IcyTowerGame()
@@ -22,7 +22,7 @@ def main() -> None:
 
     running = True
     while running:
-        move_left = move_right = False
+        move_left = move_right = jump = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -33,11 +33,12 @@ def main() -> None:
                     state = game.reset()
 
         keys = pygame.key.get_pressed()
-        move_left = keys[pygame.K_a]
-        move_right = keys[pygame.K_d]
+        move_left = keys[pygame.K_a] or keys[pygame.K_LEFT]
+        move_right = keys[pygame.K_d] or keys[pygame.K_RIGHT]
+        jump = keys[pygame.K_SPACE]
 
         if state.status == GameStatus.PLAYING:
-            state = game.step(DT, move_left, move_right)
+            state = game.step(DT, move_left, move_right, jump)
         elif state.status == GameStatus.FALLING:
             state = game.step(DT, False, False)
             if state.player.y - state.camera_y > SCREEN_HEIGHT + 120:

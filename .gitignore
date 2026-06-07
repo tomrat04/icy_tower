@@ -5,3 +5,4 @@ __pycache__/
 models/
 *.zip
 _test_out.txt
+logs/

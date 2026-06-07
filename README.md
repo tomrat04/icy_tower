@@ -1,17 +1,20 @@
 # Icy Tower — uczenie ze wzmocnieniem (Pygame)
 
-Platformówka 2D w stylu **Jump King** / Icy Tower z proceduralną mapą i środowiskiem **Gymnasium** do treningu agenta (DQN).
+Platformówka 2D w stylu **Icy Tower** z proceduralną mapą i środowiskiem **Gymnasium** (DQN).
 
 ## Zasady gry
 
 | Element | Opis |
 |--------|------|
-| Sterowanie | **A** — lewo, **D** — prawo |
-| Wspinaczka | Automatyczne odbicie po lądowaniu; wyższy pierwszy skok na starcie |
-| Platformy jednokierunkowe | W locie w górę przelatujesz przez platformy; przy spadaniu lądujesz na wierzchu |
-| Mapa | Równe odstępy pionowe; na każdym poziomie **1–3** platformy o losowej długości |
-| Przegrana | **3.** lądowanie na tej samej platformie (max **2** odbicia) **lub** spadek wyraźnie poniżej ostatniej platformy |
-| Wygrana | Osiągnięcie **poziomu 500** (wysokość na mapie, nie liczba odbić) |
+| Sterowanie | **←/→** lub **A/D** — ruch, **Spacja** — skok |
+| Skok w miejscu | Niski — ok. **1 piętro** w górę |
+| Rozbieg | ←/→ na ziemi buduje **pęd pionowy** (pasek); im pełniejszy, tym wyższy skok (do **2 pięter**) |
+| Wall jump | Przy ścianie + **Spacja** — odbicie w bok i **boost w górę** (`vy`), nie szybszy bieg w poziomie |
+| Combo | Jednym skokiem min. **2 piętra** w górę (np. 10→12) — startuje **pasek timera** |
+| Utrzymanie combo | Zanim timer zniknie, kolejny skok o ≥2 piętra — dłuższa seria = więcej punktów na koniec |
+| Mapa | Do poz. 100: 1 szeroka platforma; od 100: 75% × 1 wąska, 25% × 2 wąskie |
+| Przegrana | Wypadnięcie poniżej dolnej krawędzi ekranu (auto-scroll) |
+| Wygrana | Poziom **500** |
 
 ## Instalacja
 
@@ -23,65 +26,18 @@ pip install -r requirements.txt
 
 ## Uruchomienie
 
-**Gra ręczna:**
-
 ```bash
 python play.py
 ```
 
-- **R** — restart po śmierci  
-- **ESC** — wyjście  
+Trening: `python train.py` (domyślnie **1 000 000** kroków, 8 równoległych envów)
 
-**Trening DQN:**
-
-```bash
-python train.py --timesteps 200000 --n-envs 4
-```
-
-**TensorBoard** (w drugim terminalu):
-
-```bash
-tensorboard --logdir logs/tensorboard
-```
-
-Logi SB3: nagroda, loss, epsilon, ewaluacja. Metryka gry: `game/highest_level` (najwyższy poziom w epizodzie).
-
-Opcje: `--tb-log logs/tensorboard`, `--run-name moj_eksperyment`
-
-**Test agenta** (60 FPS, jak `play.py`):
-
-```bash
-python test.py --model models/best/best_model
-```
-
-Opcje: `--fps 60`, `--pause-on-end 2`, **R** — restart, **ESC** — wyjście
-
-## Struktura projektu
-
-```
-icy_tower/
-  config.py      # stałe fizyki i mapy
-  entities.py    # gracz, platforma
-  world.py       # generator poziomów
-  game.py        # logika i reguły
-  render.py      # rysowanie Pygame
-  env.py         # Gymnasium Env
-play.py          # gra człowiek
-train.py         # trening SB3 (+ pasek postępu tqdm)
-test.py          # podgląd modelu w normalnym tempie
-```
+Test agenta: `python test.py --model models/best/best_model`
 
 ## Uczenie ze wzmocnieniem
 
-- **Akcje:** `0` — bez ruchu, `1` — lewo, `2` — prawo  
-- **Nagroda:** +1 za nowy poziom platformy, kara przy śmierci, bonus przy wygranej  
-- **Obserwacja (46 cech):** gracz + **10 poziomów** platform nad ostatnią platformą odbicia (x, y, szerokość, level)  
-- Stary model (18 cech) nie zadziała — wytrenuj od nowa po zmianie obserwacji  
+- **Akcje:** 0–5 (ruch, skok, kombinacje)
+- **Obserwacja (102 cechy):** `x`, `y`, `vx`, `vy`, pęd pionowy, margines od dołu ekranu, combo + **12 najbliższych platform** (pozycja względem agenta, szerokość, szansa lądowania)
+- Stary model wymaga **ponownego treningu**
 
-Logika obserwacji: `icy_tower/observations.py`
-
-## Dalsze kroki
-
-- Curriculum learning (mniej platform na start)  
-- Nagroda kształtująca za zbliżanie się do najbliższej platformy  
-- Frame stacking / CNN jeśli dodasz render jako obraz  
+Logika: `icy_tower/game.py`, `icy_tower/config.py`
