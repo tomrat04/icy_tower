@@ -45,8 +45,8 @@ def main() -> None:
     parser.add_argument(
         "--n-eval-episodes",
         type=int,
-        default=50,
-        help="Epizody na jeden punkt eval (więcej = mniej szumu na wykresie)",
+        default=90,
+        help="Epizody eval (stratified co 10 pięter; 90 = po 5 na poziom)",
     )
     args = parser.parse_args()
 
@@ -90,14 +90,14 @@ def main() -> None:
         model = PPO(
             "MlpPolicy",
             train_env,
-            learning_rate=2.5e-4,
+            learning_rate=2e-4,
             n_steps=1024,
             batch_size=256,
-            n_epochs=10,
+            n_epochs=8,
             gamma=0.995,
             gae_lambda=0.95,
-            clip_range=0.2,
-            ent_coef=0.03,
+            clip_range=0.15,
+            ent_coef=0.02,
             vf_coef=0.5,
             max_grad_norm=0.5,
             verbose=1,

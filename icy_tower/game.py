@@ -48,6 +48,7 @@ class GameState:
     world: WorldGenerator
     status: GameStatus = GameStatus.PLAYING
     highest_level: int = 0
+    peak_level: int = 0
     win_level: int = WIN_LEVEL
     camera_y: float = 0.0
     camera_pressure_y: float = 0.0
@@ -97,6 +98,7 @@ class IcyTowerGame:
             player=player,
             world=world,
             highest_level=start_level,
+            peak_level=start_level,
             win_level=self._win_level,
             camera_y=cam_y,
             camera_pressure_y=cam_y,
@@ -172,8 +174,9 @@ class IcyTowerGame:
             self._trigger_fall(s, "Wypadłeś poza dolną krawędź ekranu.")
             return s
 
-        # highest_level tylko przy lądowaniu (plat.level) — nie z pozycji Y w locie
-        view_level = max(s.highest_level, self._level_from_y(s.player.y))
+        player_level = self._level_from_y(s.player.y)
+        s.peak_level = max(s.peak_level, player_level)
+        view_level = max(s.highest_level, s.peak_level)
         s.world.ensure_rows(view_level)
 
         if s.highest_level >= s.win_level:

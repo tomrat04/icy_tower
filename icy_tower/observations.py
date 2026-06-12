@@ -86,7 +86,7 @@ def build_observation(state: GameState) -> np.ndarray:
         margin_bottom,
         float(state.land_grace > 0.0),
         state.wall_chain / max(MAX_WALL_BOUNCES_PER_AIR, 1),
-        state.highest_level / float(state.win_level),
+        max(state.highest_level, state.peak_level) / float(state.win_level),
         standing_dx,
         standing_dy,
         _player_level(state) / float(state.win_level),

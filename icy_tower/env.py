@@ -8,6 +8,7 @@ from gymnasium import spaces
 
 from icy_tower.config import (
     DT,
+    HARD_MODE_LEVEL,
     LEVEL_HEIGHT,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
@@ -19,6 +20,8 @@ from icy_tower.observations import OBS_DIM, build_observation
 
 # --- Nagrody i kary ---
 REWARD_LEVEL_UP = 10.0
+REWARD_LEVEL_UP_HARD_BONUS = 5.0
+REWARD_HIGHEST_LEVEL_BONUS = 1.0
 REWARD_TAKEOFF = 0.5
 REWARD_ASCEND_PER_STEP = 0.04
 MAX_ASCEND_REWARD_PER_AIR = 0.6
@@ -61,7 +64,8 @@ class IcyTowerEnv(gym.Env):
         self.observation_space = spaces.Box(-high, high, dtype=np.float32)
         self._screen = None
         self._renderer = None
-        self._prev_level = 0
+        self._prev_peak_level = 0
+        self._prev_landed_level = 0
         self._step_count = 0
         self._idle_on_start_steps = 0
         self._idle_on_level0_steps = 0
@@ -84,16 +88,27 @@ class IcyTowerEnv(gym.Env):
         if seed is not None:
             self._seed = seed
 
-        self._episode_start_level = int(
-            self.np_random.integers(0, TRAIN_START_LEVEL_MAX + 1)
-        )
-        episode_seed = int(self.np_random.integers(0, 2**31 - 1))
+        opts = options or {}
+        if "start_level" in opts:
+            self._episode_start_level = int(opts["start_level"])
+            self._episode_start_level = max(
+                0, min(self._episode_start_level, TRAIN_START_LEVEL_MAX)
+            )
+        else:
+            self._episode_start_level = int(
+                self.np_random.integers(0, TRAIN_START_LEVEL_MAX + 1)
+            )
+        if "episode_seed" in opts:
+            episode_seed = int(opts["episode_seed"])
+        else:
+            episode_seed = int(self.np_random.integers(0, 2**31 - 1))
         state = self.game.reset(
             seed=episode_seed,
             start_level=self._episode_start_level,
             win_level=WIN_LEVEL,
         )
-        self._prev_level = state.highest_level
+        self._prev_peak_level = state.peak_level
+        self._prev_landed_level = state.highest_level
         self._step_count = 0
         self._idle_on_start_steps = 0
         self._idle_on_level0_steps = 0
@@ -118,12 +133,27 @@ class IcyTowerEnv(gym.Env):
         if jump and left_ground:
             reward += REWARD_TAKEOFF
 
-        levels_gained = state.highest_level - self._prev_level
-        if levels_gained > 0:
-            reward += REWARD_LEVEL_UP * levels_gained
-            self._prev_level = state.highest_level
-            self._idle_on_start_steps = 0
-            self._idle_on_level0_steps = 0
+        made_progress = False
+
+        peak_gained = state.peak_level - self._prev_peak_level
+        if peak_gained > 0:
+            reward += REWARD_HIGHEST_LEVEL_BONUS * peak_gained
+            self._prev_peak_level = state.peak_level
+            made_progress = True
+
+        if state._landed_this_frame:
+            landed_gained = state.highest_level - self._prev_landed_level
+            if landed_gained > 0:
+                for level in range(self._prev_landed_level + 1, state.highest_level + 1):
+                    reward += REWARD_LEVEL_UP
+                    if level >= HARD_MODE_LEVEL:
+                        reward += REWARD_LEVEL_UP_HARD_BONUS
+                self._prev_landed_level = state.highest_level
+                self._idle_on_start_steps = 0
+                self._idle_on_level0_steps = 0
+                made_progress = True
+
+        if made_progress:
             self._steps_without_level_gain = 0
         else:
             self._steps_without_level_gain += 1
@@ -182,6 +212,7 @@ class IcyTowerEnv(gym.Env):
         p = state.player
         return {
             "highest_level": state.highest_level,
+            "peak_level": state.peak_level,
             "start_level": self._episode_start_level,
             "vx": p.vx,
             "vy": p.vy,

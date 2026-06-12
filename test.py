@@ -18,7 +18,7 @@ from icy_tower.render import GameRenderer
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Podgląd wytrenowanego agenta")
-    parser.add_argument("--model", type=str, default="models/icy_ppo_final.zip")
+    parser.add_argument("--model", type=str, default="models/best/best_model.zip")
     parser.add_argument("--fps", type=int, default=FPS, help="Tempo renderowania")
     parser.add_argument(
         "--pause-on-end",
