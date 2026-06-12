@@ -50,10 +50,6 @@ class GameRenderer:
         if state.status == GameStatus.PLAYING:
             self._draw_run_momentum_bar(state)
 
-            if state.wall_chain > 0:
-                wall = self.font.render("Odbicie ściany", True, COLOR_RUN_BAR)
-                self.screen.blit(wall, (240, 36))
-
         if state.status == GameStatus.WON:
             txt = self.font_big.render("WYGRANA!", True, COLOR_WIN)
             self.screen.blit(txt, txt.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)))

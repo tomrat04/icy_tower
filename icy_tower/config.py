@@ -43,12 +43,6 @@ def _jump_air_time(vy0: float, levels_up: int) -> float:
 JUMP_REACH_ONE_LEVEL = MOVE_SPEED * _jump_air_time(JUMP_VELOCITY_STAND, 1) + PLAYER_WIDTH + 16
 JUMP_REACH_TWO_LEVELS = MOVE_SPEED * _jump_air_time(JUMP_VELOCITY_MAX, 2) + PLAYER_WIDTH + 16
 
-# Wall jump — jednorazowy boost vy; po 2. odbiciu lub lądowaniu reset
-WALL_JUMP_MARGIN = 22.0
-WALL_JUMP_MIN_MOMENTUM = 0.1
-WALL_VY_BOOST = 1.15
-MAX_WALL_BOUNCES_PER_AIR = 1
-
 # Tarcie poziome na platformie (puszczenie klawiszy)
 GROUND_DECEL = 2600.0
 GROUND_STOP_SPEED = 25.0
@@ -64,8 +58,8 @@ SCROLL_DEATH_MARGIN = 40.0
 EASY_LEVELS = 100
 HARD_MODE_LEVEL = 100
 EARLY_PLATFORM_WIDTHS = (190, 210, 230, 250)
-HARD_PLATFORM_WIDTHS = (65, 75, 85, 95)
-HARD_TWO_PLATFORM_CHANCE = 0.25
+HARD_PLATFORM_WIDTHS = (80, 90, 100, 110)
+HARD_TWO_PLATFORM_CHANCE = 0.0
 
 WIN_LEVEL = 200
 # Trening: losowy start 0..TRAIN_START_LEVEL_MAX (~43% epizodów na hard, poz. 100+)

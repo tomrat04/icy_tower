@@ -15,7 +15,6 @@ from icy_tower.config import (
     JUMP_VELOCITY_STAND,
     LEVEL_HEIGHT,
     MAX_FALL_SPEED,
-    MAX_WALL_BOUNCES_PER_AIR,
     MOMENTUM_JUMP_BOOST,
     MOVE_SPEED,
     PLAYER_HEIGHT,
@@ -27,9 +26,6 @@ from icy_tower.config import (
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
     SCROLL_DEATH_MARGIN,
-    WALL_JUMP_MARGIN,
-    WALL_JUMP_MIN_MOMENTUM,
-    WALL_VY_BOOST,
     WIN_LEVEL,
 )
 from icy_tower.entities import Platform, Player
@@ -54,7 +50,6 @@ class GameState:
     camera_pressure_y: float = 0.0
     on_ground: bool = False
     run_momentum: float = 0.0
-    wall_chain: int = 0
     death_reason: str = ""
     move_left: bool = False
     move_right: bool = False
@@ -162,10 +157,8 @@ class IcyTowerGame:
         if s.land_grace > 0.0:
             s.land_grace = max(0.0, s.land_grace - dt)
 
-        if jump:
-            if not self._try_wall_jump(s, move_left, move_right):
-                if s.on_ground and not s._landed_this_frame:
-                    self._do_jump(s)
+        if jump and s.on_ground and not s._landed_this_frame:
+            self._do_jump(s)
 
         self._update_camera(s, dt)
 
@@ -213,41 +206,6 @@ class IcyTowerGame:
         s.on_ground = False
         s.standing_platform_id = None
         s._landed_this_frame = False
-        s.wall_chain = 0
-
-    def _try_wall_jump(
-        self, s: GameState, move_left: bool, move_right: bool
-    ) -> bool:
-        """Wall jump: przy ścianie + skok odbija w bok (max 1× w locie, reset po lądowaniu)."""
-        p = s.player
-        if s.wall_chain >= MAX_WALL_BOUNCES_PER_AIR:
-            return False
-
-        at_left = p.x <= WALL_JUMP_MARGIN
-        at_right = p.x >= SCREEN_WIDTH - PLAYER_WIDTH - WALL_JUMP_MARGIN
-        if not at_left and not at_right:
-            return False
-
-        momentum = max(s.run_momentum, WALL_JUMP_MIN_MOMENTUM)
-        if s.wall_chain == 0 and s.on_ground and s.run_momentum < WALL_JUMP_MIN_MOMENTUM:
-            return False
-
-        if at_left:
-            p.vx = MOVE_SPEED
-            p.x = 0.0
-        else:
-            p.vx = -MOVE_SPEED
-            p.x = SCREEN_WIDTH - PLAYER_WIDTH
-
-        s.wall_chain += 1
-        base_vy = self._vertical_from_momentum(momentum, extra=WALL_VY_BOOST)
-        if p.vy > base_vy:
-            p.vy = base_vy
-
-        s.on_ground = False
-        s.standing_platform_id = None
-        s._landed_this_frame = False
-        return True
 
     def _apply_horizontal_input(
         self, s: GameState, move_left: bool, move_right: bool
@@ -349,7 +307,6 @@ class IcyTowerGame:
         s.standing_platform_id = plat.id
         s._landed_this_frame = True
         s.land_grace = 0.35
-        s.wall_chain = 0
         s.highest_level = max(s.highest_level, plat.level)
 
     def _trigger_fall(self, s: GameState, reason: str) -> None:

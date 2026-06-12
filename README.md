@@ -9,7 +9,7 @@ Platformówka 2D w stylu **Icy Tower** z proceduralną mapą i środowiskiem **G
 | Sterowanie | **←/→** lub **A/D** — ruch, **Spacja** — skok |
 | Skok w miejscu | Niski — ok. **1 piętro** w górę |
 | Rozbieg | ←/→ na ziemi buduje **pęd pionowy** (pasek); im pełniejszy, tym wyższy skok (do **2 pięter**) |
-| Wall jump | Przy ścianie + **Spacja** — odbicie w bok i **boost w górę** (`vy`), nie szybszy bieg w poziomie |
+| Ściany | Blokują ruch w poziomie — bez odbicia |
 | Combo | Jednym skokiem min. **2 piętra** w górę (np. 10→12) — startuje **pasek timera** |
 | Utrzymanie combo | Zanim timer zniknie, kolejny skok o ≥2 piętra — dłuższa seria = więcej punktów na koniec |
 | Mapa | Do poz. 100: 1 szeroka platforma; od 100: 75% × 1 wąska, 25% × 2 wąskie |

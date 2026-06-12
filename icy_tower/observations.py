@@ -6,7 +6,6 @@ from icy_tower.config import (
     JUMP_VELOCITY_MAX,
     LEVEL_HEIGHT,
     MAX_FALL_SPEED,
-    MAX_WALL_BOUNCES_PER_AIR,
     MOVE_SPEED,
     OBS_PLATFORMS_NEAR,
     RUN_MOMENTUM_FOR_MAX_JUMP,
@@ -16,7 +15,7 @@ from icy_tower.config import (
 from icy_tower.game import GameState
 
 # Gracz: pozycja, prędkości, stan gry
-OBS_PLAYER_DIM = 15
+OBS_PLAYER_DIM = 14
 # Każda platforma: pozycja względem agenta, szerokość, czy można wylądować
 OBS_PLATFORM_FEAT_DIM = 7
 OBS_DIM = OBS_PLAYER_DIM + OBS_PLATFORMS_NEAR * OBS_PLATFORM_FEAT_DIM
@@ -85,7 +84,6 @@ def build_observation(state: GameState) -> np.ndarray:
         state.run_momentum / max(RUN_MOMENTUM_FOR_MAX_JUMP, 1e-6),
         margin_bottom,
         float(state.land_grace > 0.0),
-        state.wall_chain / max(MAX_WALL_BOUNCES_PER_AIR, 1),
         max(state.highest_level, state.peak_level) / float(state.win_level),
         standing_dx,
         standing_dy,
