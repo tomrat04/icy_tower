@@ -3,20 +3,17 @@ from __future__ import annotations
 import pygame
 
 from icy_tower.config import (
+    COLOR_BAR_BG,
     COLOR_BG,
-    COLOR_COMBO_BAR,
-    COLOR_COMBO_BAR_BG,
     COLOR_DEATH,
     COLOR_PLATFORM,
     COLOR_PLAYER,
+    COLOR_RUN_BAR,
     COLOR_TEXT,
     COLOR_WIN,
-    COLOR_RUN_BAR,
-    COMBO_TIMER_DURATION,
     RUN_MOMENTUM_FOR_MAX_JUMP,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
-    WIN_LEVEL,
 )
 from icy_tower.game import GameState, GameStatus
 
@@ -47,33 +44,15 @@ class GameRenderer:
         color = COLOR_PLAYER if state.status == GameStatus.PLAYING else COLOR_DEATH
         pygame.draw.rect(self.screen, color, pr, border_radius=6)
 
-        hud = (
-            f"Poziom: {state.highest_level}/{WIN_LEVEL}  "
-            f"Wynik: {state.score}"
-        )
+        hud = f"Poziom: {state.highest_level}/{state.win_level}"
         self.screen.blit(self.font.render(hud, True, COLOR_TEXT), (12, 12))
 
         if state.status == GameStatus.PLAYING:
             self._draw_run_momentum_bar(state)
 
-            if state.combo_chain > 0 or state.combo_timer > 0:
-                self._draw_combo_bar(state)
-
             if state.wall_chain > 0:
-                wall = self.font.render(
-                    f"Odbicie ściany {state.wall_chain}/2",
-                    True,
-                    COLOR_RUN_BAR,
-                )
+                wall = self.font.render("Odbicie ściany", True, COLOR_RUN_BAR)
                 self.screen.blit(wall, (240, 36))
-
-            if state.last_combo_score > 0:
-                flash = self.font.render(
-                    f"+{state.last_combo_score} combo!",
-                    True,
-                    COLOR_COMBO_BAR,
-                )
-                self.screen.blit(flash, (12, 84))
 
         if state.status == GameStatus.WON:
             txt = self.font_big.render("WYGRANA!", True, COLOR_WIN)
@@ -89,7 +68,7 @@ class GameRenderer:
         x, y = 12, 36
         cap = RUN_MOMENTUM_FOR_MAX_JUMP if RUN_MOMENTUM_FOR_MAX_JUMP > 0 else 1.0
         fill = max(0.0, min(1.0, state.run_momentum / cap))
-        pygame.draw.rect(self.screen, COLOR_COMBO_BAR_BG, (x, y, bar_w, bar_h), border_radius=3)
+        pygame.draw.rect(self.screen, COLOR_BAR_BG, (x, y, bar_w, bar_h), border_radius=3)
         if fill > 0:
             pygame.draw.rect(
                 self.screen,
@@ -99,22 +78,4 @@ class GameRenderer:
             )
         pct = int(fill * 100)
         label = self.font.render(f"Pęd pionowy {pct}%", True, COLOR_RUN_BAR)
-        self.screen.blit(label, (x + bar_w + 8, y - 2))
-
-    def _draw_combo_bar(self, state: GameState) -> None:
-        bar_w = 220
-        bar_h = 14
-        x, y = 12, 58
-        fill = 0.0
-        if COMBO_TIMER_DURATION > 0:
-            fill = max(0.0, min(1.0, state.combo_timer / COMBO_TIMER_DURATION))
-        pygame.draw.rect(self.screen, COLOR_COMBO_BAR_BG, (x, y, bar_w, bar_h), border_radius=4)
-        if fill > 0:
-            pygame.draw.rect(
-                self.screen,
-                COLOR_COMBO_BAR,
-                (x, y, int(bar_w * fill), bar_h),
-                border_radius=4,
-            )
-        label = self.font.render(f"COMBO x{state.combo_chain}", True, COLOR_COMBO_BAR)
         self.screen.blit(label, (x + bar_w + 8, y - 2))

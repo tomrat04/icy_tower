@@ -3,7 +3,6 @@ from __future__ import annotations
 import numpy as np
 
 from icy_tower.config import (
-    COMBO_TIMER_DURATION,
     JUMP_VELOCITY_MAX,
     LEVEL_HEIGHT,
     MAX_FALL_SPEED,
@@ -13,12 +12,11 @@ from icy_tower.config import (
     RUN_MOMENTUM_FOR_MAX_JUMP,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
-    WIN_LEVEL,
 )
 from icy_tower.game import GameState
 
 # Gracz: pozycja, prędkości, stan gry
-OBS_PLAYER_DIM = 18
+OBS_PLAYER_DIM = 15
 # Każda platforma: pozycja względem agenta, szerokość, czy można wylądować
 OBS_PLATFORM_FEAT_DIM = 7
 OBS_DIM = OBS_PLAYER_DIM + OBS_PLATFORMS_NEAR * OBS_PLATFORM_FEAT_DIM
@@ -62,13 +60,10 @@ def build_observation(state: GameState) -> np.ndarray:
     screen_x = p.x / SCREEN_WIDTH
     screen_y = (p.y - cam) / SCREEN_HEIGHT
     feet_screen_y = (p.feet_y - cam) / SCREEN_HEIGHT
-    world_y = -p.y / (WIN_LEVEL * LEVEL_HEIGHT)
+    world_y = -p.y / (state.win_level * LEVEL_HEIGHT)
     vx = p.vx / MOVE_SPEED
     vy = p.vy / max(abs(JUMP_VELOCITY_MAX), MAX_FALL_SPEED)
     margin_bottom = (SCREEN_HEIGHT - (p.feet_y - cam)) / SCREEN_HEIGHT
-    timer_norm = (
-        state.combo_timer / COMBO_TIMER_DURATION if COMBO_TIMER_DURATION > 0 else 0.0
-    )
 
     standing_dx = 0.0
     standing_dy = 0.0
@@ -91,13 +86,10 @@ def build_observation(state: GameState) -> np.ndarray:
         margin_bottom,
         float(state.land_grace > 0.0),
         state.wall_chain / max(MAX_WALL_BOUNCES_PER_AIR, 1),
-        state.highest_level / float(WIN_LEVEL),
-        timer_norm,
-        state.combo_chain / 20.0,
-        state.score / 50000.0,
+        state.highest_level / float(state.win_level),
         standing_dx,
         standing_dy,
-        _player_level(state) / float(WIN_LEVEL),
+        _player_level(state) / float(state.win_level),
     ]
 
     platform_feats: list[float] = []

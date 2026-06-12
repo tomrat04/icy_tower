@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 
 import pygame
-from stable_baselines3 import DQN
+from stable_baselines3 import PPO
 
 from icy_tower.config import DT, FPS, SCREEN_HEIGHT, SCREEN_WIDTH
 from icy_tower.game import GameStatus, IcyTowerGame
@@ -18,7 +18,7 @@ from icy_tower.render import GameRenderer
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Podgląd wytrenowanego agenta")
-    parser.add_argument("--model", type=str, default="models/best/best_model")
+    parser.add_argument("--model", type=str, default="models/icy_ppo_final.zip")
     parser.add_argument("--fps", type=int, default=FPS, help="Tempo renderowania")
     parser.add_argument(
         "--pause-on-end",
@@ -36,7 +36,7 @@ def main() -> None:
         print(f"Brak modelu: {path}", file=sys.stderr)
         sys.exit(1)
 
-    model = DQN.load(path)
+    model = PPO.load(path)
     game = IcyTowerGame(seed=args.seed)
     state = game.reset(seed=args.seed)
 

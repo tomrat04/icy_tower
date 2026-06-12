@@ -9,21 +9,18 @@ from icy_tower.config import (
     CAMERA_PLAYER_RATIO,
     CAMERA_SMOOTH,
     CAMERA_SMOOTH_AIR,
-    COMBO_BASE_SCORE,
-    COMBO_MIN_LEVELS_GAIN,
-    COMBO_TIMER_DECAY,
-    COMBO_TIMER_DURATION,
     GROUND_DECEL,
     GROUND_STOP_SPEED,
     GRAVITY,
-    JUMP_VELOCITY_MAX,
     JUMP_VELOCITY_STAND,
     LEVEL_HEIGHT,
     MAX_FALL_SPEED,
     MAX_WALL_BOUNCES_PER_AIR,
+    MOMENTUM_JUMP_BOOST,
     MOVE_SPEED,
     PLAYER_HEIGHT,
     PLAYER_WIDTH,
+    ROWS_AHEAD,
     RUN_MOMENTUM_BUILD,
     RUN_MOMENTUM_DECAY,
     RUN_MOMENTUM_FOR_MAX_JUMP,
@@ -51,16 +48,12 @@ class GameState:
     world: WorldGenerator
     status: GameStatus = GameStatus.PLAYING
     highest_level: int = 0
+    win_level: int = WIN_LEVEL
     camera_y: float = 0.0
     camera_pressure_y: float = 0.0
     on_ground: bool = False
     run_momentum: float = 0.0
     wall_chain: int = 0
-    score: int = 0
-    combo_chain: int = 0
-    combo_timer: float = 0.0
-    last_combo_score: int = 0
-    jump_takeoff_level: Optional[int] = None
     death_reason: str = ""
     move_left: bool = False
     move_right: bool = False
@@ -74,13 +67,28 @@ class IcyTowerGame:
     def __init__(self, seed: Optional[int] = None):
         self.seed = seed
         self.state: Optional[GameState] = None
+        self._win_level = WIN_LEVEL
 
-    def reset(self, seed: Optional[int] = None) -> GameState:
+    def reset(
+        self,
+        seed: Optional[int] = None,
+        start_level: int = 0,
+        win_level: Optional[int] = None,
+    ) -> GameState:
         if seed is not None:
             self.seed = seed
+        self._win_level = win_level if win_level is not None else WIN_LEVEL
+        start_level = max(0, start_level)
+
         world = WorldGenerator(self.seed)
         world.reset(start_level=0)
-        start_plat = min(world.platforms, key=lambda p: p.level)
+        world.ensure_rows(start_level + ROWS_AHEAD)
+
+        plats = [p for p in world.platforms if p.level == start_level]
+        if not plats:
+            raise RuntimeError(f"Brak platformy na poziomie {start_level}")
+        start_plat = world.rng.choice(plats)
+
         px = start_plat.x + start_plat.width / 2 - PLAYER_WIDTH / 2
         py = start_plat.y - PLAYER_HEIGHT
         player = Player(x=px, y=py, vy=0.0)
@@ -88,12 +96,12 @@ class IcyTowerGame:
         self.state = GameState(
             player=player,
             world=world,
-            highest_level=start_plat.level,
+            highest_level=start_level,
+            win_level=self._win_level,
             camera_y=cam_y,
             camera_pressure_y=cam_y,
             on_ground=True,
             standing_platform_id=start_plat.id,
-            jump_takeoff_level=start_plat.level,
         )
         return self.state
 
@@ -117,9 +125,6 @@ class IcyTowerGame:
         s.move_right = move_right
         s.time += dt
         s._landed_this_frame = False
-        s.last_combo_score = 0
-
-        self._tick_combo_timer(s, dt)
 
         if s.on_ground:
             self._update_run_momentum(s, dt, move_left, move_right)
@@ -167,11 +172,11 @@ class IcyTowerGame:
             self._trigger_fall(s, "Wypadłeś poza dolną krawędź ekranu.")
             return s
 
-        player_level = self._level_from_y(s.player.y)
-        s.highest_level = max(s.highest_level, player_level)
-        s.world.ensure_rows(s.highest_level)
+        # highest_level tylko przy lądowaniu (plat.level) — nie z pozycji Y w locie
+        view_level = max(s.highest_level, self._level_from_y(s.player.y))
+        s.world.ensure_rows(view_level)
 
-        if s.highest_level >= WIN_LEVEL:
+        if s.highest_level >= s.win_level:
             s.status = GameStatus.WON
 
         return s
@@ -186,8 +191,7 @@ class IcyTowerGame:
 
     def _vertical_from_momentum(self, momentum: float, extra: float = 1.0) -> float:
         t = self._momentum_ratio(momentum)
-        vy = JUMP_VELOCITY_STAND + (JUMP_VELOCITY_MAX - JUMP_VELOCITY_STAND) * t
-        return vy * extra
+        return JUMP_VELOCITY_STAND * (1.0 + MOMENTUM_JUMP_BOOST * t) * extra
 
     def _update_run_momentum(
         self, s: GameState, dt: float, move_left: bool, move_right: bool
@@ -200,22 +204,9 @@ class IcyTowerGame:
         else:
             s.run_momentum = max(0.0, s.run_momentum - RUN_MOMENTUM_DECAY * dt)
 
-    def _stand_level(self, s: GameState) -> int:
-        p = s.player
-        feet = p.feet_y
-        best: Optional[int] = None
-        for plat in s.world.get_platforms_near(p.y, radius=LEVEL_HEIGHT):
-            if abs(feet - plat.y) > 4:
-                continue
-            if plat.contains_x(p.center_x, margin=2):
-                if best is None or plat.level > best:
-                    best = plat.level
-        return best if best is not None else self._level_from_y(p.y)
-
     def _do_jump(self, s: GameState) -> None:
         p = s.player
         p.vy = self._vertical_from_momentum(s.run_momentum)
-        s.jump_takeoff_level = self._stand_level(s)
         s.on_ground = False
         s.standing_platform_id = None
         s._landed_this_frame = False
@@ -224,7 +215,7 @@ class IcyTowerGame:
     def _try_wall_jump(
         self, s: GameState, move_left: bool, move_right: bool
     ) -> bool:
-        """Wall jump: przy ścianie + skok odbija w drugą stronę (max 2× w locie)."""
+        """Wall jump: przy ścianie + skok odbija w bok (max 1× w locie, reset po lądowaniu)."""
         p = s.player
         if s.wall_chain >= MAX_WALL_BOUNCES_PER_AIR:
             return False
@@ -246,10 +237,9 @@ class IcyTowerGame:
             p.x = SCREEN_WIDTH - PLAYER_WIDTH
 
         s.wall_chain += 1
-        if s.wall_chain == 1:
-            base_vy = self._vertical_from_momentum(momentum, extra=WALL_VY_BOOST)
-            if p.vy > base_vy:
-                p.vy = base_vy
+        base_vy = self._vertical_from_momentum(momentum, extra=WALL_VY_BOOST)
+        if p.vy > base_vy:
+            p.vy = base_vy
 
         s.on_ground = False
         s.standing_platform_id = None
@@ -290,36 +280,6 @@ class IcyTowerGame:
             p.x = SCREEN_WIDTH - PLAYER_WIDTH
             if p.vx > 0.0:
                 p.vx = 0.0
-
-    def _tick_combo_timer(self, s: GameState, dt: float) -> None:
-        if s.combo_timer <= 0.0:
-            return
-        s.combo_timer -= dt * COMBO_TIMER_DECAY
-        if s.combo_timer <= 0.0:
-            self._end_combo(s)
-
-    def _register_landing_combo(self, s: GameState, landed_level: int) -> None:
-        if s.jump_takeoff_level is None:
-            return
-        levels_gained = landed_level - s.jump_takeoff_level
-        if levels_gained >= COMBO_MIN_LEVELS_GAIN:
-            if s.combo_chain > 0:
-                s.combo_chain += 1
-            else:
-                s.combo_chain = 1
-            s.combo_timer = COMBO_TIMER_DURATION
-        elif s.combo_chain > 0:
-            self._end_combo(s)
-
-    def _end_combo(self, s: GameState) -> None:
-        if s.combo_chain <= 0:
-            s.combo_timer = 0.0
-            return
-        points = COMBO_BASE_SCORE * s.combo_chain * s.combo_chain
-        s.score += points
-        s.last_combo_score = points
-        s.combo_chain = 0
-        s.combo_timer = 0.0
 
     def _update_camera(self, s: GameState, dt: float) -> None:
         follow = s.player.y - SCREEN_HEIGHT * CAMERA_PLAYER_RATIO
@@ -388,11 +348,8 @@ class IcyTowerGame:
         s.land_grace = 0.35
         s.wall_chain = 0
         s.highest_level = max(s.highest_level, plat.level)
-        self._register_landing_combo(s, plat.level)
-        s.jump_takeoff_level = plat.level
 
     def _trigger_fall(self, s: GameState, reason: str) -> None:
-        self._end_combo(s)
         s.status = GameStatus.FALLING
         s.death_reason = reason
         s.on_ground = False

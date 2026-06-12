@@ -1,6 +1,6 @@
 # Icy Tower — uczenie ze wzmocnieniem
 
-Platformówka 2D w stylu **Icy Tower** z proceduralną mapą i środowiskiem **Gymnasium** (DQN).
+Platformówka 2D w stylu **Icy Tower** z proceduralną mapą i środowiskiem **Gymnasium** (PPO).
 
 ## Zasady gry
 
@@ -36,6 +36,6 @@ python test.py
 
 ## Uczenie ze wzmocnieniem
 
-- **Algorytm:** DQN
+- **Algorytm:** PPO
 - **Akcje:** 0–5 (lewo, prawo, skok - różne kombinacje)
 - **Obserwacje (102 cechy):** `x`, `y`, `vx`, `vy`, pęd pionowy, margines od dołu ekranu, combo + **12 najbliższych platform** (pozycja względem agenta, szerokość, szansa lądowania)
