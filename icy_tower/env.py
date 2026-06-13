@@ -18,7 +18,6 @@ from icy_tower.config import (
 from icy_tower.game import GameStatus, IcyTowerGame
 from icy_tower.observations import OBS_DIM, build_observation
 
-# --- Nagrody i kary ---
 REWARD_LEVEL_UP = 10.0
 REWARD_LEVEL_UP_HARD_BONUS = 5.0
 REWARD_HIGHEST_LEVEL_BONUS = 0.2
@@ -259,7 +258,7 @@ class IcyTowerEnv(gym.Env):
         if self._screen is None:
             pygame.init()
             self._screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-            pygame.display.set_caption("Icy Tower RL")
+            pygame.display.set_caption("Icy Tower")
             self._renderer = GameRenderer(self._screen)
         assert self.game.state is not None
         self._renderer.draw(self.game.state)

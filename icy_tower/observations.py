@@ -14,9 +14,7 @@ from icy_tower.config import (
 )
 from icy_tower.game import GameState
 
-# Gracz: pozycja, prędkości, stan gry
 OBS_PLAYER_DIM = 14
-# Każda platforma: pozycja względem agenta, szerokość, czy można wylądować
 OBS_PLATFORM_FEAT_DIM = 7
 OBS_DIM = OBS_PLAYER_DIM + OBS_PLATFORMS_NEAR * OBS_PLATFORM_FEAT_DIM
 

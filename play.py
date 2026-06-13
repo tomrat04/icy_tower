@@ -1,5 +1,3 @@
-"""Gra ręczna — A/D lub strzałki, Spacja skok, ESC wyjście, R restart."""
-
 from __future__ import annotations
 
 import sys
@@ -14,7 +12,6 @@ from icy_tower.render import GameRenderer
 def main() -> None:
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Icy Tower — strzałki / A/D, Spacja")
     clock = pygame.time.Clock()
     renderer = GameRenderer(screen)
     game = IcyTowerGame()

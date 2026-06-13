@@ -1,5 +1,3 @@
-"""Stałe gry Icy Tower."""
-
 import math
 
 SCREEN_WIDTH = 800
@@ -62,7 +60,6 @@ HARD_PLATFORM_WIDTHS = (80, 90, 100, 110)
 HARD_TWO_PLATFORM_CHANCE = 0.0
 
 WIN_LEVEL = 200
-# Trening: losowy start 0..TRAIN_START_LEVEL_MAX (~43% epizodów na hard, poz. 100+)
 TRAIN_START_LEVEL_MAX = 175
 OBS_PLATFORMS_NEAR = 12
 ROWS_AHEAD = 25
