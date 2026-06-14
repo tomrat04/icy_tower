@@ -15,10 +15,7 @@ from icy_tower.callbacks import (
 from icy_tower.env import IcyTowerEnv
 from icy_tower.wrappers import IcyTowerVecWrapper
 
-CURRICULUM_PHASES = [
-    {"name": "etap1", "start_min": 0, "start_max": 100, "jump_per_step": True},
-    {"name": "etap2", "start_min": 75, "start_max": 175, "jump_per_step": False},
-]
+TARGET_PHASE = {"name": "etap2_finetune", "start_min": 75, "start_max": 175, "jump_per_step": False}
 
 CHECKPOINT_STEPS = 50000
 EVAL_STEPS = 50000
@@ -38,45 +35,34 @@ def _apply_curriculum(vec_env, phase):
     vec_env.env_method("set_curriculum", phase["start_min"], phase["start_max"], phase["jump_per_step"])
 
 
-def train_from_scratch(
-    timesteps=3333333,
-    n_envs=8,
-    save_dir="models",
-    tb_log="logs/tensorboard",
-    run_name=None,
-    seed=42,
-    n_eval_episodes=20,
+def finetune(
+        model_path="models/best/best_model",
+        vec_path="models/vecnormalize.pkl",
+        timesteps=1000000,
+        finetune_lr=5e-5,
+        n_envs=8,
+        save_dir="models",
+        tb_log="logs/tensorboard",
+        run_name=None,
+        seed=42,
+        n_eval_episodes=20,
 ):
     os.makedirs(save_dir, exist_ok=True)
     run = run_name or datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    phase_steps = timesteps // len(CURRICULUM_PHASES)
     checkpoint_freq = max(CHECKPOINT_STEPS // n_envs, 1)
     eval_freq = max(EVAL_STEPS // n_envs, 1)
 
-    train_env = make_vec_env(lambda: _make_env(seed, CURRICULUM_PHASES[0]), n_envs=n_envs, seed=seed)
-    train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True, clip_obs=10.0)
+    train_env = make_vec_env(lambda: _make_env(seed, TARGET_PHASE), n_envs=n_envs, seed=seed)
+    train_env = VecNormalize.load(vec_path, train_env)
 
-    eval_base = DummyVecEnv([lambda: _make_env(seed + 1, CURRICULUM_PHASES[-1])])
+    eval_base = DummyVecEnv([lambda: _make_env(seed + 1, TARGET_PHASE)])
     eval_env = VecNormalize(eval_base, norm_obs=True, norm_reward=False, clip_obs=10.0, training=False)
 
-    model = PPO(
-        "MlpPolicy",train_env,
-        learning_rate=1e-4,
-        n_steps=2048,
-        batch_size=512,
-        n_epochs=6,
-        gamma=0.995,
-        gae_lambda=0.95,
-        clip_range=0.1,
-        ent_coef=0.01,
-        vf_coef=0.5,
-        max_grad_norm=0.4,
-        verbose=1,
-        seed=seed,
-        tensorboard_log=tb_log,
-        policy_kwargs=dict(net_arch=dict(pi=[128, 128], vf=[128, 128])),
-    )
+    model = PPO.load(model_path, env=train_env)
+    print(f"wczytano model {model_path}, wznowienie od kroku: {model.num_timesteps}")
+    if finetune_lr:
+        model.learning_rate = finetune_lr
 
     vec_save_cb = VecNormalizeSaveCallback(train_env, save_dir, save_freq=checkpoint_freq)
     checkpoint = CheckpointCallback(save_freq=checkpoint_freq, save_path=save_dir, name_prefix="icy_ppo")
@@ -86,20 +72,28 @@ def train_from_scratch(
     )
     callbacks = CallbackList([checkpoint, vec_save_cb, eval_cb, TensorboardGameCallback()])
 
-    phase_plan = [(p, phase_steps) for p in CURRICULUM_PHASES]
-    reszta = timesteps - phase_steps * len(CURRICULUM_PHASES)
-    if reszta > 0:
-        phase_plan[-1] = (phase_plan[-1][0], phase_plan[-1][1] + reszta)
+    _apply_curriculum(train_env, TARGET_PHASE)
+    print(f"\ntrening finetune: {timesteps} kroków")
 
-    for phase, steps in phase_plan:
-        _apply_curriculum(train_env, phase)
-        print(f"\ntrening: {phase['name']} ({steps} kroków)")
-        model.learn(total_timesteps=steps, callback=callbacks, tb_log_name=run, progress_bar=True)
+    model.learn(
+        total_timesteps=timesteps,
+        callback=callbacks,
+        tb_log_name=run,
+        reset_num_timesteps=False,
+        progress_bar=True,
+    )
 
-    model.save(f"{save_dir}/icy_ppo_final")
+    model.save(f"{save_dir}/icy_ppo_finetuned")
     vec_save_cb.save_now()
     train_env.close()
     eval_env.close()
-    print(f"model: {save_dir}/icy_ppo_final.zip")
+    print(f"Gotowe! Model: {save_dir}/icy_ppo_finetuned.zip")
 
-train_from_scratch(run_name="trening_od_zera")
+
+finetune(
+    model_path="models/best/best_model",
+    vec_path="models/vecnormalize.pkl",
+    timesteps=1000000,
+    finetune_lr=5e-5,
+    run_name="etap2_resume",
+)

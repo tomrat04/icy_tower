@@ -50,6 +50,7 @@ class GameState:
     camera_pressure_y: float = 0.0
     on_ground: bool = False
     run_momentum: float = 0.0
+    momentum_direction: int = 0  # <--- ZAPAMIĘTUJEMY KIERUNEK (-1: lewo, 1: prawo, 0: stoi)
     death_reason: str = ""
     move_left: bool = False
     move_right: bool = False
@@ -66,10 +67,10 @@ class IcyTowerGame:
         self._win_level = WIN_LEVEL
 
     def reset(
-        self,
-        seed: Optional[int] = None,
-        start_level: int = 0,
-        win_level: Optional[int] = None,
+            self,
+            seed: Optional[int] = None,
+            start_level: int = 0,
+            win_level: Optional[int] = None,
     ) -> GameState:
         if seed is not None:
             self.seed = seed
@@ -103,7 +104,7 @@ class IcyTowerGame:
         return self.state
 
     def step(
-        self, dt: float, move_left: bool, move_right: bool, jump: bool = False
+            self, dt: float, move_left: bool, move_right: bool, jump: bool = False
     ) -> GameState:
         s = self.state
         if s is None:
@@ -146,10 +147,10 @@ class IcyTowerGame:
             self._resolve_platform_landings(s, dt)
 
         if (
-            s.on_ground
-            and not s._landed_this_frame
-            and s.land_grace <= 0.0
-            and not self._is_on_standing_platform(s)
+                s.on_ground
+                and not s._landed_this_frame
+                and s.land_grace <= 0.0
+                and not self._is_on_standing_platform(s)
         ):
             s.on_ground = False
             s.standing_platform_id = None
@@ -190,15 +191,34 @@ class IcyTowerGame:
         return JUMP_VELOCITY_STAND * (1.0 + MOMENTUM_JUMP_BOOST * t) * extra
 
     def _update_run_momentum(
-        self, s: GameState, dt: float, move_left: bool, move_right: bool
+            self, s: GameState, dt: float, move_left: bool, move_right: bool
     ) -> None:
-        if move_left or move_right:
+
+        # Ustalamy, w którą stronę aktualnie chce biec gracz
+        current_dir = 0
+        if move_left and not move_right:
+            current_dir = -1
+        elif move_right and not move_left:
+            current_dir = 1
+
+        if current_dir != 0:
+            # Jeśli gracz zmienił kierunek biegu (i nie startuje z zera), tniemy momentum do 0
+            if s.momentum_direction != 0 and s.momentum_direction != current_dir:
+                s.run_momentum = 0.0
+
+            # Zapisujemy nowy kierunek i normalnie budujemy momentum
+            s.momentum_direction = current_dir
             s.run_momentum = min(
                 RUN_MOMENTUM_FOR_MAX_JUMP,
                 s.run_momentum + RUN_MOMENTUM_BUILD * dt,
             )
         else:
+            # Gracz puścił klawisze (albo wcisnął oba naraz) - momentum po prostu zwalnia
             s.run_momentum = max(0.0, s.run_momentum - RUN_MOMENTUM_DECAY * dt)
+
+            # Jeśli wyhamował do zera, czyścimy pamięć o kierunku
+            if s.run_momentum == 0.0:
+                s.momentum_direction = 0
 
     def _do_jump(self, s: GameState) -> None:
         p = s.player
@@ -208,7 +228,7 @@ class IcyTowerGame:
         s._landed_this_frame = False
 
     def _apply_horizontal_input(
-        self, s: GameState, move_left: bool, move_right: bool
+            self, s: GameState, move_left: bool, move_right: bool
     ) -> None:
         p = s.player
         if move_left and not move_right:
@@ -217,7 +237,7 @@ class IcyTowerGame:
             p.vx = MOVE_SPEED
 
     def _apply_ground_friction(
-        self, s: GameState, dt: float, move_left: bool, move_right: bool
+            self, s: GameState, dt: float, move_left: bool, move_right: bool
     ) -> None:
         if move_left or move_right:
             return

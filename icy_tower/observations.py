@@ -24,7 +24,6 @@ def _player_level(state: GameState) -> int:
 
 
 def _horizontal_gap_to_platform(px: float, pw: float, plat) -> float:
-    """0 = nad platformą; >0 = odległość w bok (znormalizowana później)."""
     if px + pw <= plat.x:
         return plat.x - (px + pw)
     if px >= plat.x + plat.width:

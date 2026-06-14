@@ -1,20 +1,18 @@
 # Icy Tower — uczenie ze wzmocnieniem
 
-Platformówka 2D w stylu **Icy Tower** z proceduralną mapą i środowiskiem **Gymnasium** (PPO).
+Platformówka 2D w stylu Icy Tower, losową mapą i środowiskiem Gymnasium (PPO).
 
 ## Zasady gry
 
-| Element | Opis |
-|--------|------|
-| Sterowanie | **←/→** lub **A/D** — ruch, **Spacja** — skok |
-| Skok w miejscu | Niski — ok. **1 piętro** w górę |
-| Rozbieg | ←/→ na ziemi buduje **pęd pionowy** (pasek); im pełniejszy, tym wyższy skok (do **2 pięter**) |
-| Ściany | Blokują ruch w poziomie — bez odbicia |
-| Combo | Jednym skokiem min. **2 piętra** w górę (np. 10→12) — startuje **pasek timera** |
-| Utrzymanie combo | Zanim timer zniknie, kolejny skok o ≥2 piętra — dłuższa seria = więcej punktów na koniec |
-| Mapa | Do poz. 100: 1 szeroka platforma; od 100: 75% × 1 wąska, 25% × 2 wąskie |
-| Przegrana | Wypadnięcie poniżej dolnej krawędzi ekranu|
-| Wygrana | Poziom **500** |
+| Element          | Opis                                                                            |
+|------------------|---------------------------------------------------------------------------------|
+| Sterowanie       | ←/→ lub A/D — ruch, spacja — skok                                               |
+| Skok w miejscu   | Niski — około 1 piętro w górę                                                   |
+| Rozbieg          | Rozbieg na ziemi buduje pęd pionowy - im większy, tym wyższy skok (do 3 pięter) |
+| Ściany           | Blokują ruch w poziomie                                                         |
+| Mapa             | Do poziomu 25: szerokie platformy, Od poziomu 26: wąskie platformy              |
+| Przegrana        | Wypadnięcie poniżej dolnej krawędzi                                             |
+| Wygrana          | Poziom 50                                                                       |
 
 ## Uruchomienie gry
 
@@ -37,5 +35,5 @@ python test.py
 ## Uczenie ze wzmocnieniem
 
 - **Algorytm:** PPO
-- **Akcje:** 0–5 (lewo, prawo, skok - różne kombinacje)
-- **Obserwacje (102 cechy):** `x`, `y`, `vx`, `vy`, pęd pionowy, margines od dołu ekranu, combo + **12 najbliższych platform** (pozycja względem agenta, szerokość, szansa lądowania)
+- **Akcje:** 6 (brak, lewo, prawo, skok, lewo + skok, prawo + skok)
+- **Obserwacje (98 cech):** m.in.: `x`, `y`, `vx`, `vy`, pęd pionowy, margines od dołu ekranu, combo + 12 najbliższych platform (pozycja względem agenta, szerokość)
