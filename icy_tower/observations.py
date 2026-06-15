@@ -14,16 +14,16 @@ from icy_tower.config import (
 )
 from icy_tower.game import GameState
 
-OBS_PLAYER_DIM = 14
-OBS_PLATFORM_FEAT_DIM = 7
-OBS_DIM = OBS_PLAYER_DIM + OBS_PLATFORMS_NEAR * OBS_PLATFORM_FEAT_DIM
+OBS_PLAYER = 14
+OBS_PLATFORM = 7
+OBS_DIM = OBS_PLAYER + OBS_PLATFORMS_NEAR * OBS_PLATFORM
 
 
-def _player_level(state: GameState) -> int:
+def player_level(state: GameState):
     return int(round(-state.player.y / LEVEL_HEIGHT))
 
 
-def _horizontal_gap_to_platform(px: float, pw: float, plat) -> float:
+def horizontal_gap_to_platform(px, pw, plat):
     if px + pw <= plat.x:
         return plat.x - (px + pw)
     if px >= plat.x + plat.width:
@@ -31,26 +31,26 @@ def _horizontal_gap_to_platform(px: float, pw: float, plat) -> float:
     return 0.0
 
 
-def _collect_nearby_platforms(state: GameState) -> list:
+def collect_nearby_platforms(state: GameState):
     p = state.player
     plats = state.world.get_platforms_near(p.y, radius=LEVEL_HEIGHT * 10)
     plats.sort(key=lambda pl: (abs(pl.y - p.feet_y), abs(pl.x + pl.width / 2 - p.center_x)))
     return plats[:OBS_PLATFORMS_NEAR]
 
 
-def _platform_features(state: GameState, plat) -> list[float]:
+def platform_features(state: GameState, plat):
     p = state.player
     cam = state.camera_y
     dx = (plat.x + plat.width / 2 - p.center_x) / SCREEN_WIDTH
     dy_levels = (plat.y - p.feet_y) / LEVEL_HEIGHT
     width = plat.width / SCREEN_WIDTH
     plat_screen_y = (plat.y - cam) / SCREEN_HEIGHT
-    gap = _horizontal_gap_to_platform(p.x, p.width, plat) / SCREEN_WIDTH
-    can_land = 1.0 if gap == 0.0 and plat.y <= p.feet_y + 6 else 0.0
+    gap = horizontal_gap_to_platform(p.x, p.width, plat) / SCREEN_WIDTH
+    can_land = 1.0 if gap == 0.0 and plat.y < p.feet_y else 0.0
     return [dx, dy_levels, width, plat_screen_y, gap, can_land, 1.0]
 
 
-def build_observation(state: GameState) -> np.ndarray:
+def build_observation(state: GameState):
     p = state.player
     cam = state.camera_y
     screen_x = p.x / SCREEN_WIDTH
@@ -78,21 +78,21 @@ def build_observation(state: GameState) -> np.ndarray:
         vx,
         vy,
         float(state.on_ground),
-        state.run_momentum / max(RUN_MOMENTUM_FOR_MAX_JUMP, 1e-6),
+        state.run_momentum,
         margin_bottom,
         float(state.land_grace > 0.0),
         max(state.highest_level, state.peak_level) / float(state.win_level),
         standing_dx,
         standing_dy,
-        _player_level(state) / float(state.win_level),
+        player_level(state) / float(state.win_level),
     ]
 
-    platform_feats: list[float] = []
-    nearby = _collect_nearby_platforms(state)
+    platform_feats = []
+    nearby = collect_nearby_platforms(state)
     for i in range(OBS_PLATFORMS_NEAR):
         if i < len(nearby):
-            platform_feats.extend(_platform_features(state, nearby[i]))
+            platform_feats.extend(platform_features(state, nearby[i]))
         else:
-            platform_feats.extend([0.0] * OBS_PLATFORM_FEAT_DIM)
+            platform_feats.extend([0.0] * OBS_PLATFORM)
 
     return np.array([*player_feats, *platform_feats], dtype=np.float32)

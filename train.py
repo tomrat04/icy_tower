@@ -24,7 +24,7 @@ CHECKPOINT_STEPS = 50000
 EVAL_STEPS = 50000
 
 
-def _make_env(seed, phase):
+def make_env(seed, phase):
     env = IcyTowerEnv(
         seed=seed,
         start_level_min=phase["start_min"],
@@ -34,46 +34,36 @@ def _make_env(seed, phase):
     return IcyTowerVecWrapper(Monitor(env, info_keywords=("highest_level", "start_level")))
 
 
-def _apply_curriculum(vec_env, phase):
+def apply_curriculum(vec_env, phase):
     vec_env.env_method("set_curriculum", phase["start_min"], phase["start_max"], phase["jump_per_step"])
 
 
-def train_from_scratch(
-    timesteps=3333333,
-    n_envs=8,
-    save_dir="models",
-    tb_log="logs/tensorboard",
-    run_name=None,
-    seed=42,
-    n_eval_episodes=20,
-):
+def train(timesteps=3333333, n_envs=8, save_dir="models", tb_log="logs/tensorboard",
+    run_name="trening", n_eval_episodes=20):
+
     os.makedirs(save_dir, exist_ok=True)
-    run = run_name or datetime.now().strftime("%Y%m%d_%H%M%S")
+    run = run_name
 
     phase_steps = timesteps // len(CURRICULUM_PHASES)
     checkpoint_freq = max(CHECKPOINT_STEPS // n_envs, 1)
     eval_freq = max(EVAL_STEPS // n_envs, 1)
 
-    train_env = make_vec_env(lambda: _make_env(seed, CURRICULUM_PHASES[0]), n_envs=n_envs, seed=seed)
+    train_env = make_vec_env(lambda: make_env(CURRICULUM_PHASES[0]), n_envs=n_envs)
     train_env = VecNormalize(train_env, norm_obs=True, norm_reward=True, clip_obs=10.0)
 
-    eval_base = DummyVecEnv([lambda: _make_env(seed + 1, CURRICULUM_PHASES[-1])])
+    eval_base = DummyVecEnv([lambda: make_env(CURRICULUM_PHASES[-1])])
     eval_env = VecNormalize(eval_base, norm_obs=True, norm_reward=False, clip_obs=10.0, training=False)
 
     model = PPO(
         "MlpPolicy",train_env,
-        learning_rate=1e-4,
+        learning_rate=0.0001,
         n_steps=2048,
         batch_size=512,
         n_epochs=6,
-        gamma=0.995,
-        gae_lambda=0.95,
+        gamma=0.9999,
         clip_range=0.1,
-        ent_coef=0.01,
+        ent_coef=0.02,
         vf_coef=0.5,
-        max_grad_norm=0.4,
-        verbose=1,
-        seed=seed,
         tensorboard_log=tb_log,
         policy_kwargs=dict(net_arch=dict(pi=[128, 128], vf=[128, 128])),
     )
@@ -92,8 +82,8 @@ def train_from_scratch(
         phase_plan[-1] = (phase_plan[-1][0], phase_plan[-1][1] + reszta)
 
     for phase, steps in phase_plan:
-        _apply_curriculum(train_env, phase)
-        print(f"\ntrening: {phase['name']} ({steps} kroków)")
+        apply_curriculum(train_env, phase)
+        print(f"\ntrening: {phase['name']} - {steps} kroków")
         model.learn(total_timesteps=steps, callback=callbacks, tb_log_name=run, progress_bar=True)
 
     model.save(f"{save_dir}/icy_ppo_final")
@@ -102,4 +92,4 @@ def train_from_scratch(
     eval_env.close()
     print(f"model: {save_dir}/icy_ppo_final.zip")
 
-train_from_scratch(run_name="trening_od_zera")
+train()
